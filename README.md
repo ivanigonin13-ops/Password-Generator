@@ -52,14 +52,14 @@
    ```
 4. Запустите программу:
    ```bash
-   python3 organizer.py
+   python3 generator.py
    ```
 5. Чтобы остановить программу, нажмите комбинацию клавиш `Control + C` в Терминале.
 
 #### 🐧 Инструкция для Linux
 1. Откройте терминал и перейдите в папку с проектом:
    ```bash
-   cd /путь_к_папке/smart-downloads-organizer
+   cd /путь_к_папке/Password_gen
    ```
 2. Установите зависимости:
    ```bash
@@ -67,7 +67,7 @@
    ```
 3. Запустите скрипт:
    ```bash
-   python3 organizer.py
+   python3 generator.py
    ```
 4. Для остановки трекера нажмите `Ctrl + C`.
 
