@@ -61,11 +61,30 @@
    cd /путь_к_папке/Password_gen
    ```
 2. Установите зависимости:
-   ```bash
+   ```
    pip3 install -r requirements.txt
    ```
+3. Установите требуемые пакеты для авто копирования пароля в буфер обмена:
+   Ubuntu/Mint/Debian
+   ```
+   sudo apt install xclip
+
+   ```
+
+   Fedora/RHEL:
+   ```
+   sudo dnf install xclip
+
+   ```
+
+   Arch Linux:
+   ```
+   sudo pacman -S xclip
+
+   ```
+
 3. Запустите скрипт:
-   ```bash
+   ```
    python3 generator.py
    ```
 
@@ -77,5 +96,4 @@
 
 ---
 
-<p align="center">Made with ❤️ for a cleaner workspace</p>
 

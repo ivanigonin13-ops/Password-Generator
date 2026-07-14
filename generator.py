@@ -1,96 +1,117 @@
 import string
 import secrets
+# 1. Импортируем библиотеку для буфера обмена
+import pyperclip 
+from zxcvbn import zxcvbn
+
+def format_exact_time(seconds):
+    """Преобразует секунды в детальный формат."""
+    if seconds < 1:
+        ms = round(seconds * 1000, 2)
+        return f"{ms} мс (мгновенно)"
+    
+    MINUTE = 60
+    HOUR = 3600
+    DAY = 86400
+    YEAR = 31536000
+    CENTURY = 3153600000
+
+    if seconds >= CENTURY:
+        val = seconds / CENTURY
+        return f"{val:,.1f} веков"
+    elif seconds >= YEAR:
+        val = seconds / YEAR
+        return f"{val:,.1f} лет"
+        
+    days = int(seconds // DAY)
+    seconds %= DAY
+    hours = int(seconds // HOUR)
+    seconds %= HOUR
+    minutes = int(seconds // MINUTE)
+    seconds %= MINUTE
+    rem_seconds = round(seconds, 2)
+
+    parts = []
+    if days > 0: parts.append(f"{days} дн.")
+    if hours > 0: parts.append(f"{hours} ч.")
+    if minutes > 0: parts.append(f"{minutes} мин.")
+    if rem_seconds > 0 or not parts: parts.append(f"{rem_seconds} сек.")
+
+    return " ".join(parts)
 
 def check_password_strength(password):
-    """Оценивает надежность пароля по 5-балльной шкале."""
-    score = 0
+    """Возвращает оценку и словарь с временем взлома."""
+    result = zxcvbn(password)
+    score = result["score"] + 1 
+    
+    scenarios_map = {
+        "online_throttling_100_per_hour": "Онлайн-атака (есть лимит попыток)",
+        "online_no_throttling_10_per_second": "Онлайн-атака (без защиты)",
+        "offline_slow_hashing_1e4_per_second": "Оффлайн (Локальный ПК хакера)",
+        "offline_fast_hashing_1e10_per_second": "Оффлайн (Суперкомпьютер / GPU)"
+    }
+    
+    crack_times_formatted = {}
+    for key, seconds in result["crack_times_seconds"].items():
+        if key in scenarios_map:
+            crack_times_formatted[scenarios_map[key]] = format_exact_time(seconds)
+            
     feedback = []
-
-    # 1. Проверка длины
-    if len(password) >= 12:
-        score += 1
-    else:
-        feedback.append("• Слишком короткий (рекомендуется от 12 символов)")
-
-    # 2. Проверка строчных букв
-    if any(char in string.ascii_lowercase for char in password):
-        score += 1
-    else:
-        feedback.append("• Добавьте строчные буквы (a-z)")
-
-    # 3. Проверка прописных букв
-    if any(char in string.ascii_uppercase for char in password):
-        score += 1
-    else:
-        feedback.append("• Добавьте заглавные буквы (A-Z)")
-
-    # 4. Проверка цифр
-    if any(char in string.digits for char in password):
-        score += 1
-    else:
-        feedback.append("• Добавьте цифры (0-9)")
-
-    # 5. Проверка спецсимволов
-    if any(char in string.punctuation for char in password):
-        score += 1
-    else:
-        feedback.append("• Добавьте специальные знаки (например, @, #, $)")
-
-    return score, feedback
+    if result["feedback"]["warning"]:
+        feedback.append(f"• Предупреждение: {result['feedback']['warning']}")
+    if result["feedback"]["suggestions"]:
+        for suggestion in result["feedback"]["suggestions"]:
+            feedback.append(f"• Совет: {suggestion}")
+            
+    return score, crack_times_formatted, feedback
 
 def generate_password():
     print("--- Настройка генератора паролей ---")
-    
-    # Запрашиваем длину
     while True:
         try:
-            length = int(input("Введите желаемую длину пароля: "))
-            if length < 4:
-                print("Пароль должен быть не менее 4 символов.")
-                continue
+            length = int(input("Введите длину пароля: "))
+            if length < 4: print("Минимум 4 символа."); continue
             break
-        except ValueError:
-            print("Ошибка! Введите целое число.")
+        except ValueError: print("Введите число.")
     
-    # Настройки состава
     include_digits = input("Включать цифры? (да/нет): ").strip().lower() == 'да'
     include_special = input("Включать спецсимволы? (да/нет): ").strip().lower() == 'да'
     
-    all_characters = string.ascii_letters
-    if include_digits:
-        all_characters += string.digits
-    if include_special:
-        all_characters += string.punctuation
+    chars = string.ascii_letters
+    if include_digits: chars += string.digits
+    if include_special: chars += string.punctuation
         
-    # Генерация
-    password_list = [secrets.choice(all_characters) for _ in range(length)]
-    final_password = "".join(password_list)
-    
-    return final_password
+    return "".join(secrets.choice(chars) for _ in range(length))
 
-# Запуск программы
 if __name__ == "__main__":
     password = generate_password()
     
-    print("\n" + "="*30)
-    print(f"Ваш пароль: {password}")
-    print("="*30)
+    print("\n" + "="*50)
+    print(f"ПАРОЛЬ: {password}")
+    print("="*50)
     
-    # Запускаем проверку безопасности
-    score, tips = check_password_strength(password)
+    # --- БЛОК АВТОМАТИЧЕСКОГО КОПИРОВАНИЯ ---
+    try:
+        pyperclip.copy(password)
+        print("✅ Пароль успешно скопирован в буфер обмена!")
+    except Exception as e:
+        print(f"⚠️ Не удалось скопировать пароль: {e}")
+        print("(На Linux убедитесь, что установлен пакет xclip: sudo apt install xclip)")
+    # ----------------------------------------
     
-    # Выводим вердикт
-    print(f"Надежность пароля: {score}/5")
+    score, times_dict, tips = check_password_strength(password)
     
-    if score == 5:
-        print("🟢 Отличный и очень надежный пароль!")
-    elif score >= 3:
-        print("🟡 Средняя надежность. Можно использовать, но лучше улучшить.")
-    else:
-        print("🔴 Слабый пароль! Использовать небезопасно.")
+    print(f"\nНадежность: {score}/5")
+    
+    print("\n--- ВРЕМЯ ВЗЛОМА В РАЗНЫХ УСЛОВИЯХ ---")
+    for scenario, time_val in times_dict.items():
+        print(f"{scenario:<40} : {time_val}")
         
-    # Выводим советы, если они есть
+    print("-" * 50)
+    if score == 5: print("🟢 Отличный пароль!")
+    elif score >= 3: print("🟡 Средняя надежность.")
+    else: print("🔴 Слабый пароль!")
+        
     if tips:
-        print("\nРекомендации по улучшению:")
-        for tip in tips:
-            print(tip)
+        print("\nРекомендации:")
+        for tip in tips: print(tip)
